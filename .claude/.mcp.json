@@ -1,0 +1,27 @@
+{
+  "mcp_servers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp@latest"]
+    },
+    "encore": {
+      "command": "sh",
+      "args": ["-c", "cd $(pwd)/backend && encore mcp run"]
+    },
+    "serena": {
+      "command": "uvx",
+      "args": ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server", "--context", "codex"]
+    },
+    "context7": {
+      "args": ["-y", "@upstash/context7-mcp"],
+      "command": "npx"
+    },
+    "svelte": {
+      "command": "npx",
+      "args": ["-y", "@sveltejs/mcp"]
+    }
+  },
+  "tools": {
+    "web_search": true
+  }
+}

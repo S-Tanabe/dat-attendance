@@ -1,0 +1,9 @@
+.encore
+encore.gen.go
+encore.gen.cue
+/.encore
+node_modules
+/encore.gen
+
+# Local secrets override (個人環境用シークレット)
+.secrets.local.cue

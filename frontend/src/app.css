@@ -1,0 +1,116 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Orbitron:wght@400;700;900&display=swap');
+@import "tailwindcss";
+@plugin "daisyui" {
+	themes:
+		light --default,
+		dark --prefersdark,
+		cupcake,
+		bumblebee,
+		emerald,
+		corporate,
+		synthwave,
+		retro,
+		cyberpunk,
+		valentine,
+		halloween,
+		garden,
+		forest,
+		aqua,
+		lofi,
+		pastel,
+		fantasy,
+		wireframe,
+		black,
+		luxury,
+		dracula,
+		cmyk,
+		autumn,
+		business,
+		acid,
+		lemonade,
+		night,
+		coffee,
+		winter,
+		dim,
+		nord,
+		sunset,
+		caramellatte,
+		abyss,
+		silk;
+}
+
+:root {
+	font-family: 'Inter', 'Noto Sans JP', system-ui, sans-serif;
+
+	/* Sentry Feedback Widget の位置カスタマイズ */
+	--feedback-button-bottom: 20px;
+	--feedback-button-right: 20px;
+	--feedback-button-z-index: 9998; /* ErrorToast (9999) より下 */
+}
+
+/* ダークモード時の追加調整 */
+@layer base {
+	[data-theme='dark'] {
+		color-scheme: dark;
+	}
+
+	[data-theme='light'] {
+		color-scheme: light;
+	}
+}
+
+@supports (font-variation-settings: normal) {
+	:root {
+		font-family: 'InterVariable', 'Noto Sans JP', system-ui, sans-serif;
+	}
+}
+
+/* FLOW ロゴスタイル */
+.logo-primary,
+.logo-secondary,
+.logo-compact {
+	font-family: 'Orbitron', 'Bebas Neue', monospace;
+	text-transform: uppercase;
+	font-weight: 900;
+	letter-spacing: 0.12em;
+	position: relative;
+	color: hsl(var(--p));
+	transition: color 150ms ease, text-shadow 150ms ease;
+}
+
+.logo-secondary {
+	font-weight: 700;
+	letter-spacing: 0.32em;
+	color: hsl(var(--pc));
+}
+
+.logo-compact {
+	font-size: 1.5rem;
+	line-height: 1;
+	letter-spacing: 0.08em;
+}
+
+/* ダークモード時のグロー効果 */
+[data-theme='dark'] .logo-primary,
+[data-theme='dark'] .logo-secondary,
+[data-theme='dark'] .logo-compact {
+	text-shadow:
+		0 0 12px hsl(var(--p) / 0.45),
+		0 0 28px hsl(var(--p) / 0.2);
+}
+
+/* ライトモード時のシャドウ */
+[data-theme='light'] .logo-primary,
+[data-theme='light'] .logo-secondary,
+[data-theme='light'] .logo-compact {
+	text-shadow:
+		2px 2px 4px rgba(0, 0, 0, 0.1),
+		1px 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+/* Sentry Feedback Widget のカスタマイズ */
+#sentry-feedback {
+	bottom: var(--feedback-button-bottom) !important;
+	right: var(--feedback-button-right) !important;
+	z-index: var(--feedback-button-z-index) !important;
+}

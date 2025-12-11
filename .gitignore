@@ -1,0 +1,42 @@
+# Build generated files
+.svelte-kit/
+
+# Encore deployment
+.deploy/
+
+# Encore local development
+.encore/
+.secrets.local.cue
+secrets/
+
+# Node Modules
+node_modules
+.env
+
+# ESLint
+.eslintcache
+
+# SvelteKit
+.output/
+__sapper__/
+
+# Jest
+/coverage
+
+# VSCode
+.vscode/
+
+# Others
+.DS_Store
+Thumbs.db
+.serena
+.windsurf
+cookies.txt
+frontend/tmp/*
+backend/tmp/*
+.playwright-mcp
+pnpm-lock.yaml
+npm-lock.yaml
+!strategy/templates/*
+strategy/tasks/*
+tmp/*
