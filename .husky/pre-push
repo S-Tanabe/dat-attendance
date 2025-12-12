@@ -1,1 +1,1 @@
-cd frontend && pnpm run check
+cd frontend-admin && pnpm run check
