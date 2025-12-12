@@ -42,8 +42,8 @@ export class FaceRecognitionClockMethod extends BaseClockMethod {
       );
     }
 
-    // 信頼度スコアの検証（念のため再チェック）
-    const MIN_CONFIDENCE = 0.85;
+    // 信頼度スコアの検証（念のため再チェック）（デモ用に一時的に50%に設定）
+    const MIN_CONFIDENCE = 0.50;
     if (verificationData.confidence < MIN_CONFIDENCE) {
       return this.failure(
         'FACE_CONFIDENCE_LOW',

@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
 import tailwindcss from '@tailwindcss/vite';
 import { sveltekit } from '@sveltejs/kit/vite';
@@ -18,6 +19,13 @@ export default defineConfig({
 	},
 	server: {
 		port: 5174,
+		fs: {
+			// pnpm workspaceでnode_modulesが親ディレクトリにホイストされるため許可
+			allow: [
+				// プロジェクトルート（dat-attendance/）
+				path.resolve(__dirname, '..'),
+			],
+		},
 	},
 	preview: {
 		port: 5174,

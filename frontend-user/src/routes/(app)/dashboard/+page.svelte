@@ -2,14 +2,6 @@
 	import { enhance } from '$app/forms'
 	import { invalidateAll } from '$app/navigation'
 
-	interface TodayStatus {
-		has_clocked_in: boolean
-		has_clocked_out: boolean
-		clock_in_time?: string | null
-		clock_out_time?: string | null
-		working_duration_minutes?: number | null
-	}
-
 	interface AttendanceRecord {
 		id: string
 		user_id: string
@@ -19,6 +11,15 @@
 		source: 'USER' | 'ADMIN' | 'SYSTEM'
 		clock_method_id?: string | null
 		created_at: string
+	}
+
+	interface TodayStatus {
+		user_id: string
+		date: string
+		status: 'NOT_CLOCKED_IN' | 'WORKING' | 'CLOCKED_OUT'
+		clock_in_record: AttendanceRecord | null
+		clock_out_record: AttendanceRecord | null
+		records: AttendanceRecord[]
 	}
 
 	const { data, form } = $props<{
@@ -79,13 +80,31 @@
 	// 曜日の配列
 	const weekdays = ['日', '月', '火', '水', '木', '金', '土']
 
-	// 現在の状態を判定
+	// 現在の状態を判定（バックエンドのstatusを使用）
 	const workStatus = $derived(() => {
-		if (!data.todayStatus?.has_clocked_in)
+		if (!data.todayStatus)
 			return 'not_started'
-		if (data.todayStatus?.has_clocked_out)
-			return 'finished'
-		return 'working'
+		switch (data.todayStatus.status) {
+			case 'NOT_CLOCKED_IN': return 'not_started'
+			case 'WORKING': return 'working'
+			case 'CLOCKED_OUT': return 'finished'
+			default: return 'not_started'
+		}
+	})
+
+	// 出勤済みかどうか（ボタン制御用）
+	const hasClockedIn = $derived(data.todayStatus?.status !== 'NOT_CLOCKED_IN')
+	const hasClockedOut = $derived(data.todayStatus?.status === 'CLOCKED_OUT')
+
+	// 勤務時間を計算（分単位）
+	const workingDurationMinutes = $derived(() => {
+		if (!data.todayStatus?.clock_in_record)
+			return 0
+		const clockIn = new Date(data.todayStatus.clock_in_record.timestamp)
+		const clockOut = data.todayStatus.clock_out_record
+			? new Date(data.todayStatus.clock_out_record.timestamp)
+			: new Date()
+		return Math.floor((clockOut.getTime() - clockIn.getTime()) / 60000)
 	})
 
 	// ステータスラベル
@@ -218,10 +237,10 @@
 			<button
 				type='submit'
 				class='w-full h-20 rounded-2xl text-xl font-semibold transition-all duration-200 flex items-center justify-center gap-3
-					{data.todayStatus?.has_clocked_in
+					{hasClockedIn
 						? 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-600 cursor-not-allowed'
 						: 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98]'}'
-				disabled={isLoading || data.todayStatus?.has_clocked_in}
+				disabled={isLoading || hasClockedIn}
 			>
 				{#if isLoading}
 					<span class='loading loading-spinner loading-md'></span>
@@ -253,10 +272,10 @@
 			<button
 				type='submit'
 				class='w-full h-20 rounded-2xl text-xl font-semibold transition-all duration-200 flex items-center justify-center gap-3
-					{!data.todayStatus?.has_clocked_in || data.todayStatus?.has_clocked_out
+					{!hasClockedIn || hasClockedOut
 						? 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-600 cursor-not-allowed'
 						: 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 hover:scale-[1.02] active:scale-[0.98]'}'
-				disabled={isLoading || !data.todayStatus?.has_clocked_in || data.todayStatus?.has_clocked_out}
+				disabled={isLoading || !hasClockedIn || hasClockedOut}
 			>
 				{#if isLoading}
 					<span class='loading loading-spinner loading-md'></span>
@@ -280,7 +299,7 @@
 			<div class='p-4 text-center'>
 				<div class='text-xs text-slate-500 dark:text-slate-400 mb-1'>出勤</div>
 				<div class='text-lg font-semibold text-slate-800 dark:text-slate-100 tabular-nums'>
-					{formatTime(data.todayStatus?.clock_in_time)}
+					{formatTime(data.todayStatus?.clock_in_record?.timestamp)}
 				</div>
 			</div>
 
@@ -288,7 +307,7 @@
 			<div class='p-4 text-center'>
 				<div class='text-xs text-slate-500 dark:text-slate-400 mb-1'>退勤</div>
 				<div class='text-lg font-semibold text-slate-800 dark:text-slate-100 tabular-nums'>
-					{formatTime(data.todayStatus?.clock_out_time)}
+					{formatTime(data.todayStatus?.clock_out_record?.timestamp)}
 				</div>
 			</div>
 
@@ -296,7 +315,7 @@
 			<div class='p-4 text-center'>
 				<div class='text-xs text-slate-500 dark:text-slate-400 mb-1'>勤務</div>
 				<div class='text-lg font-semibold tabular-nums' class:text-green-600={workStatus() === 'working'} class:dark:text-green-400={workStatus() === 'working'} class:text-slate-800={workStatus() !== 'working'} class:dark:text-slate-100={workStatus() !== 'working'}>
-					{formatDuration(data.todayStatus?.working_duration_minutes)}
+					{formatDuration(workingDurationMinutes())}
 				</div>
 			</div>
 		</div>

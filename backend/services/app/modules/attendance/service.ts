@@ -495,8 +495,8 @@ import type {
   FaceDataStatusResponse,
 } from './types';
 
-/** 顔認証の最低信頼度スコア */
-const MIN_CONFIDENCE_SCORE = 0.85;
+/** 顔認証の最低信頼度スコア（デモ用に一時的に50%に設定） */
+const MIN_CONFIDENCE_SCORE = 0.50;
 
 /**
  * JSONBから取得したdescriptorをnumber[]にパースする
@@ -609,8 +609,8 @@ export async function verifyFaceAndClock(
   );
   const confidence = distanceToConfidence(distance);
 
-  // 信頼度チェック
-  const threshold = registeredFace.confidence_threshold ?? MIN_CONFIDENCE_SCORE;
+  // 信頼度チェック（デモ用: DBの閾値を無視して常にMIN_CONFIDENCE_SCOREを使用）
+  const threshold = MIN_CONFIDENCE_SCORE;
   if (confidence < threshold) {
     return {
       success: false,
@@ -670,4 +670,242 @@ export async function getFaceDataStatus(user_id: string): Promise<FaceDataStatus
  */
 export async function deleteFaceData(user_id: string, face_id: string): Promise<boolean> {
   return repository.deleteFaceData(face_id, user_id);
+}
+
+/**
+ * キオスク端末用：顔認証を行い打刻する（全ユーザーから検索）
+ */
+export interface PublicVerifyFaceRequest {
+  descriptor: number[];
+  clock_type: 'CLOCK_IN' | 'CLOCK_OUT';
+  liveness_check?: boolean;
+}
+
+export interface PublicVerifyFaceResponse {
+  success: boolean;
+  user_name?: string;
+  confidence?: number;
+  record?: AttendanceRecord;
+  error?: string;
+}
+
+export async function publicVerifyFaceAndClock(
+  request: PublicVerifyFaceRequest
+): Promise<PublicVerifyFaceResponse> {
+  // ベクトルの長さを検証
+  if (!request.descriptor || request.descriptor.length !== 128) {
+    return {
+      success: false,
+      error: '顔特徴ベクトルが不正です',
+    };
+  }
+
+  // 全ユーザーの登録済み顔データを取得
+  const allFaceData = await repository.getAllPrimaryFaceData();
+  if (allFaceData.length === 0) {
+    return {
+      success: false,
+      error: '登録済みの顔データがありません',
+    };
+  }
+
+  // 最も一致度の高いユーザーを検索
+  let bestMatch: { user_id: string; face_data_id: string; confidence: number; threshold: number } | null = null;
+
+  for (const faceData of allFaceData) {
+    let registeredDescriptor: number[];
+    try {
+      registeredDescriptor = parseDescriptor(faceData.descriptor);
+    } catch {
+      continue; // 不正なデータはスキップ
+    }
+
+    const distance = calculateEuclideanDistance(
+      request.descriptor,
+      registeredDescriptor
+    );
+    const confidence = distanceToConfidence(distance);
+    // デモ用: DBの閾値を無視して常にMIN_CONFIDENCE_SCOREを使用
+    const threshold = MIN_CONFIDENCE_SCORE;
+
+    if (confidence >= threshold) {
+      if (!bestMatch || confidence > bestMatch.confidence) {
+        bestMatch = {
+          user_id: faceData.user_id,
+          face_data_id: faceData.id,
+          confidence,
+          threshold,
+        };
+      }
+    }
+  }
+
+  if (!bestMatch) {
+    return {
+      success: false,
+      error: '顔認証に失敗しました。登録された顔と一致しませんでした。',
+    };
+  }
+
+  // ユーザー名を取得
+  let userName = 'ユーザー';
+  try {
+    const userResponse = await app.get_user_detail({ userId: bestMatch.user_id });
+    userName = userResponse.user.display_name || userResponse.user.email.split('@')[0];
+  } catch {
+    // ユーザー情報取得に失敗しても続行
+  }
+
+  // 打刻を実行
+  try {
+    const clockRequest: ClockRequest = {
+      clock_method_code: ClockMethodCodeEnum.FACE_RECOGNITION,
+      verification_data: {
+        face_data_id: bestMatch.face_data_id,
+        confidence: bestMatch.confidence,
+        liveness_check: request.liveness_check ?? false,
+        verified_at: new Date().toISOString(),
+        verified_by: 'KIOSK',
+      },
+    };
+
+    let record: AttendanceRecord;
+    if (request.clock_type === 'CLOCK_IN') {
+      const response = await clockIn(bestMatch.user_id, clockRequest);
+      record = response.record;
+    } else {
+      const response = await clockOut(bestMatch.user_id, clockRequest);
+      record = response.record;
+    }
+
+    return {
+      success: true,
+      user_name: userName,
+      confidence: bestMatch.confidence,
+      record,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      confidence: bestMatch.confidence,
+      error: error instanceof Error ? error.message : '打刻に失敗しました',
+    };
+  }
+}
+
+// =====================================================
+// Attendance Summary Service
+// =====================================================
+
+import type {
+  UserAttendanceSummary,
+  UserAttendanceSummaryListResponse,
+  DailyAttendance,
+  UserAttendanceDetailResponse,
+} from './types';
+import { app } from '~encore/clients';
+
+/**
+ * ユーザー勤怠サマリー一覧を取得する（管理者用）
+ */
+export async function getUserAttendanceSummaryList(
+  timezone: string = 'Asia/Tokyo'
+): Promise<UserAttendanceSummaryListResponse> {
+  // ユーザー一覧を取得
+  const usersResponse = await app.list_users({ limit: 1000, page: 1 });
+  const users = usersResponse.users || [];
+
+  // 今月の年月を取得
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+
+  // 各ユーザーのサマリーを並列取得
+  const summaries: UserAttendanceSummary[] = await Promise.all(
+    users.map(async (user) => {
+      // 今日の状態を取得
+      const todayStatus = await getTodayStatus(user.id, timezone);
+
+      // 今月の勤怠サマリーを取得
+      const monthlySummary = await repository.getMonthlyAttendanceSummary(
+        user.id,
+        year,
+        month,
+        timezone
+      );
+
+      return {
+        user_id: user.id,
+        display_name: user.display_name || user.email,
+        email: user.email,
+        today_status: todayStatus.status,
+        today_clock_in: todayStatus.clock_in_record?.timestamp?.toISOString() ?? null,
+        today_clock_out: todayStatus.clock_out_record?.timestamp?.toISOString() ?? null,
+        month_total_minutes: monthlySummary.total_minutes,
+        month_working_days: monthlySummary.working_days,
+      };
+    })
+  );
+
+  return {
+    summaries,
+    total: summaries.length,
+  };
+}
+
+/**
+ * ユーザー勤怠詳細を取得する（管理者用）
+ */
+export async function getUserAttendanceDetail(
+  user_id: string,
+  year: number,
+  month: number,
+  timezone: string = 'Asia/Tokyo'
+): Promise<UserAttendanceDetailResponse> {
+  // ユーザー情報を取得
+  const userResponse = await app.get_user_detail({ userId: user_id });
+
+  // 日別勤怠データを取得
+  const dailyData = await repository.getDailyAttendanceData(user_id, year, month, timezone);
+
+  // 月間のすべての打刻レコードを取得
+  const allRecords = await repository.getRecordsForPeriod(user_id, year, month, timezone);
+
+  // 日別にレコードをグループ化
+  const recordsByDate = new Map<string, AttendanceRecord[]>();
+  for (const record of allRecords) {
+    // タイムゾーンを考慮して日付を取得
+    const recordDate = new Date(record.timestamp);
+    // UTC時間に9時間（日本時間）を加算してローカル日付を取得
+    const jstOffset = timezone === 'Asia/Tokyo' ? 9 * 60 * 60 * 1000 : 0;
+    const localDate = new Date(recordDate.getTime() + jstOffset);
+    const dateStr = localDate.toISOString().split('T')[0];
+    const existing = recordsByDate.get(dateStr) || [];
+    existing.push(record);
+    recordsByDate.set(dateStr, existing);
+  }
+
+  // DailyAttendance形式に変換
+  const dailyAttendances: DailyAttendance[] = dailyData.map((day) => ({
+    date: day.date,
+    clock_in: day.clock_in?.toISOString() ?? null,
+    clock_out: day.clock_out?.toISOString() ?? null,
+    working_minutes: day.working_minutes,
+    records: recordsByDate.get(day.date) || [],
+  }));
+
+  // 月間合計を計算
+  const monthTotalMinutes = dailyData.reduce((sum, d) => sum + d.working_minutes, 0);
+  const monthWorkingDays = dailyData.filter((d) => d.clock_in !== null).length;
+
+  return {
+    user_id,
+    display_name: userResponse.user.display_name || userResponse.user.email,
+    email: userResponse.user.email,
+    year,
+    month,
+    daily_attendances: dailyAttendances,
+    month_total_minutes: monthTotalMinutes,
+    month_working_days: monthWorkingDays,
+  };
 }

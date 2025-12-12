@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
 import tailwindcss from '@tailwindcss/vite';
 import { sveltekit } from '@sveltejs/kit/vite';
@@ -15,5 +16,14 @@ export default defineConfig({
 	define: {
 		// package.jsonのバージョンをグローバル定数として注入
 		__APP_VERSION__: JSON.stringify(packageJson.version || 'dev'),
+	},
+	server: {
+		fs: {
+			// pnpm workspaceでnode_modulesが親ディレクトリにホイストされるため許可
+			allow: [
+				// プロジェクトルート（dat-attendance/）
+				path.resolve(__dirname, '..'),
+			],
+		},
 	},
 });

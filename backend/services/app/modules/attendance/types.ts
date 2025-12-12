@@ -248,3 +248,54 @@ export interface FaceDataStatusResponse {
   has_face_data: boolean;
   face_count: number;
 }
+
+// =====================================================
+// Admin Attendance Summary Types
+// =====================================================
+
+/**
+ * ユーザー勤怠サマリー（一覧表示用）
+ */
+export interface UserAttendanceSummary {
+  user_id: string;
+  display_name: string;
+  email: string;
+  today_status: 'NOT_CLOCKED_IN' | 'WORKING' | 'CLOCKED_OUT';
+  today_clock_in: string | null;   // ISO形式
+  today_clock_out: string | null;  // ISO形式
+  month_total_minutes: number;     // 今月の合計勤務時間（分）
+  month_working_days: number;      // 今月の勤務日数
+}
+
+/**
+ * ユーザー勤怠サマリー一覧レスポンス
+ */
+export interface UserAttendanceSummaryListResponse {
+  summaries: UserAttendanceSummary[];
+  total: number;
+}
+
+/**
+ * ユーザー勤怠詳細（日別）
+ */
+export interface DailyAttendance {
+  date: string;          // YYYY-MM-DD
+  clock_in: string | null;
+  clock_out: string | null;
+  working_minutes: number;
+  records: AttendanceRecord[];
+}
+
+/**
+ * ユーザー勤怠詳細レスポンス
+ */
+export interface UserAttendanceDetailResponse {
+  user_id: string;
+  display_name: string;
+  email: string;
+  year: number;
+  month: number;
+  daily_attendances: DailyAttendance[];
+  month_total_minutes: number;
+  month_working_days: number;
+}

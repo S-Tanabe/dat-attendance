@@ -128,6 +128,8 @@ export namespace app {
             this.baseClient = baseClient
             this.admin_clock = this.admin_clock.bind(this)
             this.admin_get_attendance = this.admin_get_attendance.bind(this)
+            this.admin_get_attendance_summary = this.admin_get_attendance_summary.bind(this)
+            this.admin_get_user_attendance_detail = this.admin_get_user_attendance_detail.bind(this)
             this.admin_get_user_today = this.admin_get_user_today.bind(this)
             this.admin_update_attendance = this.admin_update_attendance.bind(this)
             this.admin_verify_qr_token = this.admin_verify_qr_token.bind(this)
@@ -151,6 +153,8 @@ export namespace app {
             this.get_user_sessions = this.get_user_sessions.bind(this)
             this.list_roles = this.list_roles.bind(this)
             this.list_users = this.list_users.bind(this)
+            this.public_verify_face = this.public_verify_face.bind(this)
+            this.public_verify_qr_token = this.public_verify_qr_token.bind(this)
             this.register_face = this.register_face.bind(this)
             this.reset_password = this.reset_password.bind(this)
             this.restore_user = this.restore_user.bind(this)
@@ -181,6 +185,27 @@ export namespace app {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI("GET", `/admin/attendance`, undefined, {query})
             return await resp.json() as attendance.AttendanceListResponse
+        }
+
+        /**
+         * [管理者] ユーザー勤怠サマリー一覧を取得
+         */
+        public async admin_get_attendance_summary(): Promise<attendance.UserAttendanceSummaryListResponse> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI("GET", `/admin/attendance/summary`)
+            return await resp.json() as attendance.UserAttendanceSummaryListResponse
+        }
+
+        public async admin_get_user_attendance_detail(user_id: string, params: attendance.GetUserAttendanceDetailRequest): Promise<attendance.UserAttendanceDetailResponse> {
+            // Convert our params into the objects we need for the request
+            const query = makeRecord<string, string | string[]>({
+                month: params.month === undefined ? undefined : String(params.month),
+                year:  params.year === undefined ? undefined : String(params.year),
+            })
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI("GET", `/admin/attendance/user/${encodeURIComponent(user_id)}`, undefined, {query})
+            return await resp.json() as attendance.UserAttendanceDetailResponse
         }
 
         public async admin_get_user_today(user_id: string): Promise<attendance.TodayStatus> {
@@ -593,6 +618,26 @@ export namespace app {
      */
     total: number
 }
+        }
+
+        /**
+         * [公開] 顔認証で打刻を行う（タブレット端末用）
+         * 認証不要で、全ユーザーの顔データから検索して認証する
+         */
+        public async public_verify_face(params: attendance.PublicVerifyFaceRequest): Promise<attendance.PublicVerifyFaceResponse> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI("POST", `/public/attendance/face/verify`, JSON.stringify(params))
+            return await resp.json() as attendance.PublicVerifyFaceResponse
+        }
+
+        /**
+         * [公開] QRトークンを検証して打刻を行う（タブレット端末用）
+         * 認証不要だが、QRトークン自体が認証の役割を果たす
+         */
+        public async public_verify_qr_token(params: attendance.VerifyQRTokenRequest): Promise<attendance.VerifyQRTokenResponse> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI("POST", `/public/attendance/qr/verify`, JSON.stringify(params))
+            return await resp.json() as attendance.VerifyQRTokenResponse
         }
 
         /**
@@ -1548,6 +1593,14 @@ export namespace attendance {
         "clock_method": ClockMethod | null
     }
 
+    export interface DailyAttendance {
+        date: string
+        "clock_in": string | null
+        "clock_out": string | null
+        "working_minutes": number
+        records: AttendanceRecord[]
+    }
+
     export interface DeleteFaceResponse {
         success: boolean
     }
@@ -1605,12 +1658,31 @@ export namespace attendance {
         offset?: number
     }
 
+    export interface GetUserAttendanceDetailRequest {
+        year?: number
+        month?: number
+    }
+
     export interface LocationData {
         latitude?: number
         longitude?: number
         accuracy?: number
         address?: string
         timestamp?: string
+    }
+
+    export interface PublicVerifyFaceRequest {
+        descriptor: number[]
+        "clock_type": "CLOCK_IN" | "CLOCK_OUT"
+        "liveness_check"?: boolean
+    }
+
+    export interface PublicVerifyFaceResponse {
+        success: boolean
+        "user_name"?: string
+        confidence?: number
+        record?: AttendanceRecord
+        error?: string
     }
 
     export interface RegisterFaceRequest {
@@ -1640,6 +1712,33 @@ export namespace attendance {
         note?: string
     }
 
+    export interface UserAttendanceDetailResponse {
+        "user_id": string
+        "display_name": string
+        email: string
+        year: number
+        month: number
+        "daily_attendances": DailyAttendance[]
+        "month_total_minutes": number
+        "month_working_days": number
+    }
+
+    export interface UserAttendanceSummary {
+        "user_id": string
+        "display_name": string
+        email: string
+        "today_status": "NOT_CLOCKED_IN" | "WORKING" | "CLOCKED_OUT"
+        "today_clock_in": string | null
+        "today_clock_out": string | null
+        "month_total_minutes": number
+        "month_working_days": number
+    }
+
+    export interface UserAttendanceSummaryListResponse {
+        summaries: UserAttendanceSummary[]
+        total: number
+    }
+
     export interface VerifyFaceRequest {
         descriptor: number[]
         "clock_type": "CLOCK_IN" | "CLOCK_OUT"
@@ -1651,6 +1750,11 @@ export namespace attendance {
         confidence?: number
         record?: AttendanceRecord
         error?: string
+    }
+
+    export interface VerifyQRTokenRequest {
+        token: string
+        "clock_type": "CLOCK_IN" | "CLOCK_OUT"
     }
 
     export interface VerifyQRTokenRequest {

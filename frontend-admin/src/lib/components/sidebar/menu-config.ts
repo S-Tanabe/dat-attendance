@@ -42,6 +42,22 @@ export const menuItems: SidebarItem[] = [
 		order: 350,
 		requiredRole: 'admin',
 		activeMatch: ['/attendance'],
+		children: [
+			{
+				id: 'attendance_list',
+				label: '勤怠一覧',
+				icon: 'document',
+				href: '/attendance',
+				order: 351,
+			},
+			{
+				id: 'attendance_qr_scan',
+				label: 'QRスキャン',
+				icon: 'eye',
+				href: '/attendance/qr-scan',
+				order: 352,
+			},
+		],
 	},
 	{
 		id: 'users_admin',

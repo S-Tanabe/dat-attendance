@@ -3,8 +3,7 @@
 	import { onDestroy, onMount } from 'svelte'
 
 	interface TodayStatus {
-		has_clocked_in: boolean
-		has_clocked_out: boolean
+		status: 'NOT_CLOCKED_IN' | 'WORKING' | 'CLOCKED_OUT'
 	}
 
 	interface FaceStatus {
@@ -36,9 +35,11 @@
 
 	// 現在の打刻状態から適切な打刻種別を判定
 	$effect(() => {
-		if (data.todayStatus?.has_clocked_in && !data.todayStatus?.has_clocked_out) {
+		if (data.todayStatus?.status === 'WORKING') {
+			// 出勤済み（退勤前）→ 退勤モード
 			clockType = 'CLOCK_OUT'
 		} else {
+			// 未出勤 or 退勤済み → 出勤モード
 			clockType = 'CLOCK_IN'
 		}
 	})

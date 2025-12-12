@@ -317,6 +317,81 @@ export const admin_get_user_today = api(
 );
 
 // =====================================================
+// 管理者向け勤怠サマリーAPI
+// =====================================================
+
+import {
+  getUserAttendanceSummaryList,
+  getUserAttendanceDetail,
+} from './service';
+import type {
+  UserAttendanceSummaryListResponse,
+  UserAttendanceDetailResponse,
+} from './types';
+
+/**
+ * [管理者] ユーザー勤怠サマリー一覧を取得
+ */
+export const admin_get_attendance_summary = api(
+  {
+    expose: true,
+    method: 'GET',
+    path: '/admin/attendance/summary',
+    auth: true,
+  },
+  async (): Promise<UserAttendanceSummaryListResponse> => {
+    const auth = getAuthData();
+    if (!auth) {
+      throw APIError.unauthenticated('認証が必要です');
+    }
+
+    // 管理者権限チェック
+    await requirePermission(RoleLevel.ADMIN);
+
+    return getUserAttendanceSummaryList();
+  }
+);
+
+/**
+ * [管理者] ユーザー勤怠詳細を取得
+ */
+export interface GetUserAttendanceDetailRequest {
+  user_id: string;
+  year?: number;
+  month?: number;
+}
+
+export const admin_get_user_attendance_detail = api(
+  {
+    expose: true,
+    method: 'GET',
+    path: '/admin/attendance/user/:user_id',
+    auth: true,
+  },
+  async (req: GetUserAttendanceDetailRequest): Promise<UserAttendanceDetailResponse> => {
+    const auth = getAuthData();
+    if (!auth) {
+      throw APIError.unauthenticated('認証が必要です');
+    }
+
+    // 管理者権限チェック
+    await requirePermission(RoleLevel.ADMIN);
+
+    // バリデーション
+    if (!req.user_id) {
+      throw APIError.invalidArgument('user_id は必須です');
+    }
+
+    // デフォルトは今月
+    const now = new Date();
+    const year = req.year ?? now.getFullYear();
+    const month = req.month ?? (now.getMonth() + 1);
+
+    return getUserAttendanceDetail(req.user_id, year, month);
+  }
+);
+
+// =====================================================
 // QR Code APIs
 // =====================================================
 
@@ -328,6 +403,11 @@ import {
   verifyFaceAndClock,
   getFaceDataStatus,
   deleteFaceData,
+  publicVerifyFaceAndClock,
+} from './service';
+import type {
+  PublicVerifyFaceRequest,
+  PublicVerifyFaceResponse,
 } from './service';
 import type {
   GenerateQRTokenRequest,
@@ -446,6 +526,32 @@ export const admin_verify_qr_token = api(
   }
 );
 
+/**
+ * [公開] QRトークンを検証して打刻を行う（タブレット端末用）
+ * 認証不要だが、QRトークン自体が認証の役割を果たす
+ */
+export const public_verify_qr_token = api(
+  {
+    expose: true,
+    method: 'POST',
+    path: '/public/attendance/qr/verify',
+    auth: false,
+  },
+  async (req: VerifyQRTokenRequest): Promise<VerifyQRTokenResponse> => {
+    // バリデーション
+    if (!req.token) {
+      throw APIError.invalidArgument('token は必須です');
+    }
+    if (!req.clock_type) {
+      throw APIError.invalidArgument('clock_type は必須です');
+    }
+
+    // QRトークン自体がユーザー認証の役割を果たすため、
+    // verified_by は 'KIOSK' として記録
+    return verifyQRTokenAndClock(req, 'KIOSK');
+  }
+);
+
 // =====================================================
 // Face Recognition APIs
 // =====================================================
@@ -554,5 +660,29 @@ export const delete_face = api(
 
     const success = await deleteFaceData(auth.userID, req.face_id);
     return { success };
+  }
+);
+
+/**
+ * [公開] 顔認証で打刻を行う（タブレット端末用）
+ * 認証不要で、全ユーザーの顔データから検索して認証する
+ */
+export const public_verify_face = api(
+  {
+    expose: true,
+    method: 'POST',
+    path: '/public/attendance/face/verify',
+    auth: false,
+  },
+  async (req: PublicVerifyFaceRequest): Promise<PublicVerifyFaceResponse> => {
+    // バリデーション
+    if (!req.descriptor || !Array.isArray(req.descriptor)) {
+      throw APIError.invalidArgument('descriptor は必須です');
+    }
+    if (!req.clock_type) {
+      throw APIError.invalidArgument('clock_type は必須です');
+    }
+
+    return publicVerifyFaceAndClock(req);
   }
 );

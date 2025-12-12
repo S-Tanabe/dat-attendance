@@ -230,6 +230,71 @@
 		</div>
 	</section>
 
+	<!-- キオスク端末（管理者向け） -->
+	<section class='bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden'>
+		<div class='px-4 py-3 border-b border-slate-100 dark:border-slate-700'>
+			<h2 class='text-base font-semibold text-slate-800 dark:text-slate-100'>キオスク端末</h2>
+		</div>
+		<div class='p-4 space-y-4'>
+			<!-- QRコード打刻 -->
+			<div class='flex items-center justify-between'>
+				<div class='flex items-center gap-3'>
+					<div class='w-10 h-10 bg-purple-100 dark:bg-purple-900/40 rounded-full flex items-center justify-center'>
+						<svg xmlns='http://www.w3.org/2000/svg' class='h-5 w-5 text-purple-600 dark:text-purple-400' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+							<path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z' />
+						</svg>
+					</div>
+					<div>
+						<p class='text-sm font-medium text-slate-800 dark:text-slate-100'>QRコード打刻</p>
+						<p class='text-xs text-slate-500 dark:text-slate-400'>QRコードをスキャンして打刻</p>
+					</div>
+				</div>
+				<a
+					href='/kiosk'
+					target='_blank'
+					class='px-3 py-1.5 text-sm bg-purple-600 text-white hover:bg-purple-700 rounded-lg transition-colors flex items-center gap-1'
+				>
+					<svg xmlns='http://www.w3.org/2000/svg' class='h-4 w-4' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+						<path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14' />
+					</svg>
+					開く
+				</a>
+			</div>
+
+			<!-- 顔認証打刻 -->
+			<div class='flex items-center justify-between'>
+				<div class='flex items-center gap-3'>
+					<div class='w-10 h-10 bg-blue-100 dark:bg-blue-900/40 rounded-full flex items-center justify-center'>
+						<svg xmlns='http://www.w3.org/2000/svg' class='h-5 w-5 text-blue-600 dark:text-blue-400' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+							<path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z' />
+						</svg>
+					</div>
+					<div>
+						<p class='text-sm font-medium text-slate-800 dark:text-slate-100'>顔認証打刻</p>
+						<p class='text-xs text-slate-500 dark:text-slate-400'>カメラで顔認証して打刻</p>
+					</div>
+				</div>
+				<a
+					href='/kiosk-face'
+					target='_blank'
+					class='px-3 py-1.5 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-1'
+				>
+					<svg xmlns='http://www.w3.org/2000/svg' class='h-4 w-4' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+						<path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14' />
+					</svg>
+					開く
+				</a>
+			</div>
+
+			<div class='p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg'>
+				<p class='text-xs text-slate-500 dark:text-slate-400'>
+					タブレットやPCのブラウザでこれらのページを開いたままにすると、打刻端末として使用できます。
+					ログイン不要で動作します。
+				</p>
+			</div>
+		</div>
+	</section>
+
 	<!-- パスワード変更 -->
 	<section class='bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden'>
 		<div class='px-4 py-3 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between'>

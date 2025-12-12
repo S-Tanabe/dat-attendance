@@ -237,12 +237,14 @@ export async function getTodayRecords(
   timezone: string = 'Asia/Tokyo'
 ): Promise<AttendanceRecord[]> {
   // タイムゾーンを考慮した「今日」の範囲を計算
+  // date_trunc('day', NOW() AT TIME ZONE tz) で指定タイムゾーンの日付開始を取得し、
+  // AT TIME ZONE tz でUTCに変換してtimestamp型と比較
   const recordsGen = db.query<AttendanceRecord>`
     SELECT *
     FROM attendance_records
     WHERE user_id = ${user_id}
-      AND timestamp >= (NOW() AT TIME ZONE ${timezone})::date AT TIME ZONE ${timezone}
-      AND timestamp < ((NOW() AT TIME ZONE ${timezone})::date + INTERVAL '1 day') AT TIME ZONE ${timezone}
+      AND timestamp >= date_trunc('day', NOW() AT TIME ZONE ${timezone}) AT TIME ZONE ${timezone}
+      AND timestamp < date_trunc('day', NOW() AT TIME ZONE ${timezone}) AT TIME ZONE ${timezone} + INTERVAL '1 day'
     ORDER BY timestamp ASC
   `;
 
@@ -589,4 +591,175 @@ export async function hasFaceData(user_id: string): Promise<boolean> {
     SELECT COUNT(*) as count FROM face_data WHERE user_id = ${user_id}
   `;
   return parseInt(row?.count ?? '0', 10) > 0;
+}
+
+/**
+ * 全ユーザーのプライマリ顔データを取得する（キオスク端末用）
+ */
+export async function getAllPrimaryFaceData(): Promise<FaceData[]> {
+  const rowsGen = db.query<FaceData>`
+    SELECT * FROM face_data WHERE is_primary = true ORDER BY created_at DESC
+  `;
+
+  const data: FaceData[] = [];
+  for await (const row of rowsGen) {
+    data.push(row);
+  }
+  return data;
+}
+
+// =====================================================
+// Attendance Summary Repository
+// =====================================================
+
+/**
+ * 指定期間のユーザーの勤怠サマリーを取得
+ */
+export interface MonthlyAttendanceSummary {
+  user_id: string;
+  total_minutes: number;
+  working_days: number;
+}
+
+export async function getMonthlyAttendanceSummary(
+  user_id: string,
+  year: number,
+  month: number,
+  timezone: string = 'Asia/Tokyo'
+): Promise<MonthlyAttendanceSummary> {
+  // 月の開始と終了を計算
+  const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+  const endMonth = month === 12 ? 1 : month + 1;
+  const endYear = month === 12 ? year + 1 : year;
+  const endDate = `${endYear}-${String(endMonth).padStart(2, '0')}-01`;
+
+  // 日別の勤務時間を集計
+  const row = await db.queryRow<{ total_minutes: string; working_days: string }>`
+    WITH daily_work AS (
+      SELECT
+        (timestamp AT TIME ZONE ${timezone})::date as work_date,
+        MIN(CASE WHEN type = 'CLOCK_IN' THEN timestamp END) as first_clock_in,
+        MAX(CASE WHEN type = 'CLOCK_OUT' THEN timestamp END) as last_clock_out
+      FROM attendance_records
+      WHERE user_id = ${user_id}
+        AND timestamp >= ${startDate}::date AT TIME ZONE ${timezone}
+        AND timestamp < ${endDate}::date AT TIME ZONE ${timezone}
+        AND type IN ('CLOCK_IN', 'CLOCK_OUT')
+      GROUP BY work_date
+    )
+    SELECT
+      COALESCE(SUM(
+        CASE
+          WHEN first_clock_in IS NOT NULL AND last_clock_out IS NOT NULL
+          THEN EXTRACT(EPOCH FROM (last_clock_out - first_clock_in)) / 60
+          ELSE 0
+        END
+      ), 0)::integer as total_minutes,
+      COUNT(DISTINCT CASE WHEN first_clock_in IS NOT NULL THEN work_date END)::integer as working_days
+    FROM daily_work
+  `;
+
+  return {
+    user_id,
+    total_minutes: parseInt(row?.total_minutes ?? '0', 10),
+    working_days: parseInt(row?.working_days ?? '0', 10),
+  };
+}
+
+/**
+ * 指定期間の日別勤怠データを取得
+ */
+export interface DailyAttendanceData {
+  date: string;
+  clock_in: Date | null;
+  clock_out: Date | null;
+  working_minutes: number;
+}
+
+export async function getDailyAttendanceData(
+  user_id: string,
+  year: number,
+  month: number,
+  timezone: string = 'Asia/Tokyo'
+): Promise<DailyAttendanceData[]> {
+  const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+  const endMonth = month === 12 ? 1 : month + 1;
+  const endYear = month === 12 ? year + 1 : year;
+  const endDate = `${endYear}-${String(endMonth).padStart(2, '0')}-01`;
+
+  const rowsGen = db.query<{
+    work_date: string;
+    first_clock_in: Date | null;
+    last_clock_out: Date | null;
+    working_minutes: string;
+  }>`
+    WITH daily_records AS (
+      SELECT
+        to_char((timestamp AT TIME ZONE ${timezone})::date, 'YYYY-MM-DD') as work_date,
+        type,
+        timestamp as record_ts
+      FROM attendance_records
+      WHERE user_id = ${user_id}
+        AND timestamp >= ${startDate}::date AT TIME ZONE ${timezone}
+        AND timestamp < ${endDate}::date AT TIME ZONE ${timezone}
+        AND type IN ('CLOCK_IN', 'CLOCK_OUT')
+    )
+    SELECT
+      work_date,
+      MIN(CASE WHEN type = 'CLOCK_IN' THEN record_ts END) as first_clock_in,
+      MAX(CASE WHEN type = 'CLOCK_OUT' THEN record_ts END) as last_clock_out,
+      COALESCE(
+        EXTRACT(EPOCH FROM (
+          MAX(CASE WHEN type = 'CLOCK_OUT' THEN record_ts END) -
+          MIN(CASE WHEN type = 'CLOCK_IN' THEN record_ts END)
+        )) / 60,
+        0
+      )::integer as working_minutes
+    FROM daily_records
+    GROUP BY work_date
+    ORDER BY work_date
+  `;
+
+  const results: DailyAttendanceData[] = [];
+  for await (const row of rowsGen) {
+    results.push({
+      date: row.work_date,
+      clock_in: row.first_clock_in,
+      clock_out: row.last_clock_out,
+      working_minutes: parseInt(row.working_minutes, 10),
+    });
+  }
+
+  return results;
+}
+
+/**
+ * 指定期間の全打刻レコードを取得（ユーザー指定）
+ */
+export async function getRecordsForPeriod(
+  user_id: string,
+  year: number,
+  month: number,
+  timezone: string = 'Asia/Tokyo'
+): Promise<AttendanceRecord[]> {
+  const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+  const endMonth = month === 12 ? 1 : month + 1;
+  const endYear = month === 12 ? year + 1 : year;
+  const endDate = `${endYear}-${String(endMonth).padStart(2, '0')}-01`;
+
+  const rowsGen = db.query<AttendanceRecord>`
+    SELECT *
+    FROM attendance_records
+    WHERE user_id = ${user_id}
+      AND timestamp >= ${startDate}::date AT TIME ZONE ${timezone}
+      AND timestamp < ${endDate}::date AT TIME ZONE ${timezone}
+    ORDER BY timestamp ASC
+  `;
+
+  const records: AttendanceRecord[] = [];
+  for await (const row of rowsGen) {
+    records.push(row);
+  }
+
+  return records;
 }

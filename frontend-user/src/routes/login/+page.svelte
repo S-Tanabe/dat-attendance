@@ -212,6 +212,34 @@
 					ログインできない場合は管理者にお問い合わせください
 				</p>
 			</div>
+
+			<!-- キオスク端末リンク -->
+			<div class='mt-6 pt-6 border-t border-slate-200 dark:border-slate-700'>
+				<p class='text-xs text-slate-500 dark:text-slate-400 text-center mb-3'>打刻端末モード</p>
+				<div class='grid grid-cols-2 gap-2'>
+					<a
+						href='/kiosk'
+						class='flex flex-col items-center gap-2 px-4 py-3 bg-slate-100 dark:bg-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl transition-colors'
+					>
+						<svg xmlns='http://www.w3.org/2000/svg' class='h-5 w-5' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+							<path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z' />
+						</svg>
+						<span class='text-xs font-medium'>QRコード</span>
+					</a>
+					<a
+						href='/kiosk-face'
+						class='flex flex-col items-center gap-2 px-4 py-3 bg-slate-100 dark:bg-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl transition-colors'
+					>
+						<svg xmlns='http://www.w3.org/2000/svg' class='h-5 w-5' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+							<path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z' />
+						</svg>
+						<span class='text-xs font-medium'>顔認証</span>
+					</a>
+				</div>
+				<p class='text-xs text-slate-400 dark:text-slate-500 text-center mt-2'>
+					タブレット等で打刻を受け付けます
+				</p>
+			</div>
 		</div>
 	</div>
 

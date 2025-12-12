@@ -23,6 +23,7 @@
 		"@dat-attendance/shared": "workspace:*",
 		"@sentry/sveltekit": "^8.55.0",
 		"face-api.js": "^0.22.2",
+		"jsqr": "^1.4.0",
 		"qrcode": "^1.5.4",
 		"zod": "^4.1.12"
 	},

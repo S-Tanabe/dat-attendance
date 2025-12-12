@@ -15,11 +15,11 @@
 		children: import('svelte').Snippet
 	}>()
 
-	let userData = $state(data.user)
+	// data.user を直接使用（$stateで再ラップする必要なし）
+	const userData = $derived(data.user)
 
-	// データが更新されたら userData を更新 + Sentryユーザーコンテキストを更新
+	// Sentryユーザーコンテキストを更新
 	$effect(() => {
-		userData = data.user
 		if (userData && browser) {
 			setSentryUser(
 				userData.id,
