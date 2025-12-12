@@ -7,7 +7,9 @@
   "type": "module",
   "scripts": {
     "test": "vitest",
-    "gen:client": "encore gen client --output ../frontend/src/lib/generated/client.ts"
+    "gen:client": "encore gen client --output ../frontend-admin/src/lib/generated/client.ts && cp ../frontend-admin/src/lib/generated/client.ts ../frontend-user/src/lib/generated/client.ts",
+    "gen:client:admin": "encore gen client --output ../frontend-admin/src/lib/generated/client.ts",
+    "gen:client:user": "encore gen client --output ../frontend-user/src/lib/generated/client.ts"
   },
   "devDependencies": {
     "@types/node": "^20.5.7",
@@ -16,7 +18,7 @@
   },
   "dependencies": {
     "@sentry/node": "^8.55.0",
-    "encore.dev": "^1.51.5",
+    "encore.dev": "^1.52.2",
     "jose": "^6.1.0"
   },
   "optionalDependencies": {

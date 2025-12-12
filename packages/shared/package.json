@@ -1,0 +1,17 @@
+{
+  "name": "@dat-attendance/shared",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    "./errors": "./errors/index.ts",
+    "./errors/*": "./errors/*.ts",
+    "./stores": "./stores/index.ts",
+    "./auth": "./auth/index.ts",
+    "./types": "./types/index.ts",
+    "./utils": "./utils/index.ts"
+  },
+  "devDependencies": {
+    "svelte": "^5.41.0",
+    "typescript": "^5.9.3"
+  }
+}

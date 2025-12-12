@@ -1,0 +1,60 @@
+@import "tailwindcss";
+@plugin "daisyui" {
+	themes:
+		light --default,
+		dark --prefersdark,
+		cupcake,
+		bumblebee,
+		emerald,
+		corporate,
+		synthwave,
+		retro,
+		cyberpunk,
+		valentine,
+		halloween,
+		garden,
+		forest,
+		aqua,
+		lofi,
+		pastel,
+		fantasy,
+		wireframe,
+		black,
+		luxury,
+		dracula,
+		cmyk,
+		autumn,
+		business,
+		acid,
+		lemonade,
+		night,
+		coffee,
+		winter,
+		dim,
+		nord,
+		sunset,
+		caramellatte,
+		abyss,
+		silk;
+}
+
+:root {
+	font-family: 'Inter', 'Noto Sans JP', system-ui, sans-serif;
+}
+
+/* ダークモード時の追加調整 */
+@layer base {
+	[data-theme='dark'] {
+		color-scheme: dark;
+	}
+
+	[data-theme='light'] {
+		color-scheme: light;
+	}
+}
+
+@supports (font-variation-settings: normal) {
+	:root {
+		font-family: 'InterVariable', 'Noto Sans JP', system-ui, sans-serif;
+	}
+}
